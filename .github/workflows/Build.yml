@@ -1,0 +1,35 @@
+name: Build
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 3.0.100
+
+      - name: Get the Version
+        id: get-version
+        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
+
+      - name: Publish and Zip
+        run: |
+          dotnet publish src/ServiceScheduler --output .publish/ServiceScheduler
+          (cd .publish; zip -r ServiceScheduler.zip ServiceScheduler)
+      - name: Upload Binaries to GitHub Release
+        uses: svenstaro/upload-release-action@v1-release
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: .publish/ServiceScheduler.zip
+          asset_name: ServiceScheduler.${{ steps.get-version.outputs.VERSION }}.zip
+          tag: ${{ github.ref }}
+          overwrite: true
